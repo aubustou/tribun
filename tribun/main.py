@@ -1,4 +1,7 @@
+import json
+import re
 from base64 import b64decode, b64encode
+from dataclasses import InitVar, dataclass
 from typing import Callable, Dict, List, Optional
 
 from consul import Consul
@@ -10,9 +13,6 @@ MAX_OPERATIONS_IN_TXN = 64
 
 class TribunError(Exception):
     pass
-
-
-from dataclasses import InitVar, dataclass
 
 
 @dataclass(frozen=True)
@@ -33,10 +33,6 @@ class ConfigurationKey:
     @property
     def b64_value(self):
         return b64encode(str(self.value).encode()).decode()
-
-
-import json
-import re
 
 
 def get_not_existing_keys(body: str) -> List[str]:
