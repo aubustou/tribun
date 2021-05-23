@@ -2,7 +2,7 @@ import json
 import re
 from base64 import b64decode, b64encode
 from dataclasses import InitVar, dataclass
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Union
 
 from consul import Consul
 from consul.base import ClientError
@@ -18,7 +18,7 @@ class TribunError(Exception):
 @dataclass(frozen=True)
 class ConfigurationKey:
     key: str
-    value: Optional[str] = None
+    value: Union[None, str, List["ConfigurationKey"]] = None
     alterable: bool = False
     is_tree: bool = False
 
@@ -33,6 +33,10 @@ class ConfigurationKey:
     @property
     def b64_value(self):
         return b64encode(str(self.value).encode()).decode()
+
+    def key_from_namespace(self, namespace: str):
+        if namespace:
+            object.__setattr__(self, "key", "/".join([namespace, self.key]))
 
 
 def get_not_existing_keys(body: str) -> List[str]:
