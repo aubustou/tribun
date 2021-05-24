@@ -1,10 +1,18 @@
 import copy
-from typing import List
+import importlib.util
+import re
+from pathlib import Path
+from types import ModuleType
+from typing import List, Optional
 
-from consul.std import Consul
+from consul import Consul
 
 from tribun import ConfigurationKey
 from tribun.main import TribunError, multi_delete, multi_get, multi_put
+
+REVISION_FILENAME_PATTERN = re.compile(r"^([a-zA-Z0-9]{8})_([a-zA-Z0-9-_]*).py$")
+
+consul: Consul = None  # type: ignore
 
 
 def recurse(key: ConfigurationKey, namespace: str = "") -> List[ConfigurationKey]:
@@ -32,7 +40,40 @@ def get_full_keys(keys: List[ConfigurationKey]) -> List[ConfigurationKey]:
     return results
 
 
-consul: Consul = None  # type: ignore
+class Revision(ModuleType):
+    down_revision: Optional[str]
+    revision: str
+
+
+def get_revisions(folder: Path) -> List[Revision]:
+    revisions = []
+    for file_ in folder.iterdir():
+        match = REVISION_FILENAME_PATTERN.match(file_.name)
+        if not match:
+            continue
+
+        revision_id = match.groups()[0]
+        spec = importlib.util.spec_from_file_location(
+            f"tribun.revisions.{revision_id}", str(file_)
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)  # type: ignore
+        revisions.append(mod)
+
+    return revisions
+
+
+def sort_revisions(revisions: List[Revision]) -> List[Revision]:
+    dict_ = {x.DOWN_REVISION: x for x in revisions}
+
+    tree = [dict_[None]]
+
+    node = tree[0]
+    while node:
+        node = dict_.get(tree[-1].REVISION)
+        if node:
+            tree.append(node)
+    return tree
 
 
 def with_consul(func):

@@ -1,29 +1,56 @@
 import random
 import string
 from pathlib import Path
+from types import ModuleType
 from typing import List
 
 import pytest
 
 from tribun import ConfigurationKey, put
-from tribun.revision import delete, get, get_full_keys
+from tribun.revision import delete, get, get_full_keys, get_revisions, sort_revisions
 
 RESOURCES_FOLDER = Path(__file__).parent / "resources.d"
+REVISION_BODY = """
+from tribun import put
+
+DOWN_REVISION = "hgsqa54a"
+REVISION = "{revision}"
+
+def upgrade():
+    put([
+        ConfigurationKey("tribun/test/yet_another_revision", "totot")
+    ])
+
+def downgrade():
+    delete([
+        ConfigurationKey("tribun/test/yet_another_revision", "totot")
+    ])
+"""
 
 
 @pytest.fixture
 def revision():
-    revision = RESOURCES_FOLDER / (
-        "".join(random.choices(string.ascii_uppercase + string.digits, k=8)) + ".py"
-    )
+    revision_id = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    revision = RESOURCES_FOLDER / (revision_id + "_joe_la_mouke.py")
+
     with revision.open("w") as file_:
-        file_.write("toto")
+        file_.write(REVISION_BODY.format(revision=revision_id))
     yield revision
     revision.unlink()
 
 
 def test_get_revisions(revision: Path):
-    pass
+    revisions = get_revisions(RESOURCES_FOLDER)
+    assert len(revisions) == 2
+    assert all(isinstance(x, ModuleType) for x in revisions)
+
+
+def test_sort_revisions(revision: Path):
+    revisions = sort_revisions(get_revisions(RESOURCES_FOLDER))
+    assert all(
+        revisions[i].REVISION == revisions[i + 1].DOWN_REVISION
+        for i in range(len(revisions) - 1)
+    )
 
 
 def test_get_full_keys(nested_keys: List[ConfigurationKey]):
