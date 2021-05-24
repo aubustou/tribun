@@ -2,6 +2,7 @@ from typing import List
 
 from consul import Consul
 
+from tribun.errors import TribunError
 from tribun.key import Key
 from tribun.operations import multi_get
 
