@@ -5,7 +5,7 @@ import pytest
 from consul import Consul
 from consul.base import ClientError
 
-from tribun import ConfigurationKey
+from tribun.key import Key
 
 
 @pytest.fixture
@@ -16,8 +16,7 @@ def key_set_size() -> int:
 @pytest.fixture
 def large_key_set(consul: Consul, key_set_size: int):
     keys = [
-        ConfigurationKey("tribun/test/a_" + str(index), str(uuid4))
-        for index in range(key_set_size)
+        Key("tribun/test/a_" + str(index), str(uuid4)) for index in range(key_set_size)
     ]
     yield keys
     delete_keys(consul)
@@ -25,7 +24,10 @@ def large_key_set(consul: Consul, key_set_size: int):
 
 @pytest.fixture
 def consul():
-    return Consul()
+    import tribun.consul
+
+    tribun.consul.consul = Consul()
+    return tribun.consul.consul
 
 
 def delete_keys(consul: Consul):
@@ -38,25 +40,25 @@ def delete_keys(consul: Consul):
 @pytest.fixture
 def configuration_keys(consul: Consul):
     keys = [
-        ConfigurationKey("tribun/test/a", "a"),
-        ConfigurationKey("tribun/test/b", "b"),
-        ConfigurationKey("tribun/test/c", "c"),
+        Key("tribun/test/a", "a"),
+        Key("tribun/test/b", "b"),
+        Key("tribun/test/c", "c"),
     ]
     yield keys
     delete_keys(consul)
 
 
 @pytest.fixture
-def nested_keys(consul, configuration_keys: List[ConfigurationKey]):
+def nested_keys(consul, configuration_keys: List[Key]):
     keys = [
-        ConfigurationKey(
+        Key(
             "tribun/tests",
             [
-                ConfigurationKey(
+                Key(
                     "nested",
                     [
-                        ConfigurationKey("test", "magnifique"),
-                        ConfigurationKey("test_2", "bagarre"),
+                        Key("test", "magnifique"),
+                        Key("test_2", "bagarre"),
                     ],
                 )
             ],

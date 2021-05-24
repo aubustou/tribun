@@ -1,4 +1,4 @@
-from tribun import ConfigurationKey, put
+from tribun import Key, put
 
 DOWN_REVISION = None
 REVISION = "hgsqa54a"

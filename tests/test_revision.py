@@ -6,8 +6,15 @@ from typing import List
 
 import pytest
 
-from tribun import ConfigurationKey, put
-from tribun.revision import delete, get, get_full_keys, get_revisions, sort_revisions
+from tribun.key import Key
+from tribun.revision import (
+    delete,
+    get,
+    get_full_keys,
+    get_revisions,
+    put,
+    sort_revisions,
+)
 
 RESOURCES_FOLDER = Path(__file__).parent / "resources.d"
 REVISION_BODY = """
@@ -18,12 +25,12 @@ REVISION = "{revision}"
 
 def upgrade():
     put([
-        ConfigurationKey("tribun/test/yet_another_revision", "totot")
+        Key("tribun/test/yet_another_revision", "totot")
     ])
 
 def downgrade():
     delete([
-        ConfigurationKey("tribun/test/yet_another_revision", "totot")
+        Key("tribun/test/yet_another_revision", "totot")
     ])
 """
 
@@ -53,21 +60,21 @@ def test_sort_revisions(revision: Path):
     )
 
 
-def test_get_full_keys(nested_keys: List[ConfigurationKey]):
+def test_get_full_keys(nested_keys: List[Key]):
     assert len(get_full_keys(nested_keys)) == len(nested_keys) + 1
     full_keys = get_full_keys(nested_keys)
     assert full_keys[-1].key == "tribun/tests/nested/test_2"
     assert full_keys[-1].value == "bagarre"
 
 
-def test_put(nested_keys: List[ConfigurationKey]):
+def test_put(nested_keys: List[Key]):
     assert put(nested_keys)
 
 
-def test_get(nested_keys: List[ConfigurationKey]):
+def test_get(nested_keys: List[Key]):
     put(nested_keys)
     assert get(nested_keys)
 
 
-def test_delete(nested_keys: List[ConfigurationKey]):
+def test_delete(nested_keys: List[Key]):
     assert delete(nested_keys)

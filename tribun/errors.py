@@ -1,0 +1,2 @@
+class TribunError(Exception):
+    pass

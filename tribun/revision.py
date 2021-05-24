@@ -1,21 +1,20 @@
 import copy
 import importlib.util
 import re
+from abc import abstractmethod
 from pathlib import Path
 from types import ModuleType
 from typing import List, Optional
 
-from consul import Consul
-
-from tribun import ConfigurationKey
-from tribun.main import TribunError, multi_delete, multi_get, multi_put
+from tribun.consul import consul
+from tribun.errors import TribunError
+from tribun.key import Key
+from tribun.operations import multi_delete, multi_get, multi_put
 
 REVISION_FILENAME_PATTERN = re.compile(r"^([a-zA-Z0-9]{8})_([a-zA-Z0-9-_]*).py$")
 
-consul: Consul = None  # type: ignore
 
-
-def recurse(key: ConfigurationKey, namespace: str = "") -> List[ConfigurationKey]:
+def recurse(key: Key, namespace: str = "") -> List[Key]:
     keys = []
 
     if isinstance(key.value, list):
@@ -32,7 +31,7 @@ def recurse(key: ConfigurationKey, namespace: str = "") -> List[ConfigurationKey
     return keys
 
 
-def get_full_keys(keys: List[ConfigurationKey]) -> List[ConfigurationKey]:
+def get_full_keys(keys: List[Key]) -> List[Key]:
     results = []
     for key in keys:
         results.extend(recurse(key))
@@ -41,8 +40,16 @@ def get_full_keys(keys: List[ConfigurationKey]) -> List[ConfigurationKey]:
 
 
 class Revision(ModuleType):
-    down_revision: Optional[str]
-    revision: str
+    DOWN_REVISION: Optional[str]
+    REVISION: str
+
+    @abstractmethod
+    def upgrade(self) -> None:
+        pass
+
+    @abstractmethod
+    def downgrade(self) -> None:
+        pass
 
 
 def get_revisions(folder: Path) -> List[Revision]:
@@ -64,7 +71,12 @@ def get_revisions(folder: Path) -> List[Revision]:
 
 
 def sort_revisions(revisions: List[Revision]) -> List[Revision]:
-    dict_ = {x.DOWN_REVISION: x for x in revisions}
+    dict_ = {}
+    for revision in revisions:
+        down_revision = revision.DOWN_REVISION
+        if dict_.get(down_revision):
+            raise TribunError("Multi-head revisions are not supported")
+        dict_[down_revision] = revision
 
     tree = [dict_[None]]
 
@@ -76,19 +88,7 @@ def sort_revisions(revisions: List[Revision]) -> List[Revision]:
     return tree
 
 
-def with_consul(func):
-    def wrap(*args, **kwargs):
-        global consul
-
-        if not consul:
-            consul = Consul()
-        return func(*args, **kwargs)
-
-    return wrap
-
-
-@with_consul
-def put(keys: List[ConfigurationKey]) -> List[ConfigurationKey]:
+def put(keys: List[Key]) -> List[Key]:
     full_keys = get_full_keys(keys)
 
     unalterable_keys = [x for x in full_keys if not x.alterable]
@@ -102,15 +102,13 @@ def put(keys: List[ConfigurationKey]) -> List[ConfigurationKey]:
     return full_keys
 
 
-@with_consul
-def get(keys: List[ConfigurationKey]) -> List[ConfigurationKey]:
+def get(keys: List[Key]) -> List[Key]:
     full_keys = get_full_keys(keys)
 
     return multi_get(consul, full_keys)
 
 
-@with_consul
-def delete(keys: List[ConfigurationKey]) -> List[ConfigurationKey]:
+def delete(keys: List[Key]) -> List[Key]:
     full_keys = get_full_keys(keys)
     multi_delete(consul, full_keys)
 

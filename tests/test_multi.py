@@ -4,16 +4,16 @@ from typing import List
 import pytest
 from consul import Consul
 
-from tribun import ConfigurationKey
-from tribun.main import multi_delete, multi_get, multi_put
+from tribun.key import Key
+from tribun.operations import multi_delete, multi_get, multi_put
 
 
 @pytest.mark.parametrize("is_large_set", [True, False])
 def test_multi_get(
     consul: Consul,
     is_large_set: bool,
-    large_key_set: List[ConfigurationKey],
-    configuration_keys: List[ConfigurationKey],
+    large_key_set: List[Key],
+    configuration_keys: List[Key],
 ):
     if is_large_set:
         key_set = large_key_set
@@ -37,8 +37,8 @@ def test_multi_get(
 def test_multi_put(
     consul: Consul,
     is_large_set: bool,
-    large_key_set: List[ConfigurationKey],
-    configuration_keys: List[ConfigurationKey],
+    large_key_set: List[Key],
+    configuration_keys: List[Key],
 ):
     if is_large_set:
         key_set = large_key_set
@@ -54,8 +54,8 @@ def test_multi_put(
 def test_multi_delete(
     consul: Consul,
     is_large_set: bool,
-    large_key_set: List[ConfigurationKey],
-    configuration_keys: List[ConfigurationKey],
+    large_key_set: List[Key],
+    configuration_keys: List[Key],
     key_set_size: int,
 ):
     if is_large_set:
