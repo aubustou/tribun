@@ -7,8 +7,8 @@ REVISION = "hgsqa54a"
 def upgrade():
     put(
         [
-            ConfigurationKey("tribun/tests/groum", "hop"),
-            ConfigurationKey("tribun/tests", [ConfigurationKey("toto", "tata")]),
+            Key("tribun/tests/groum", "hop"),
+            Key("tribun/tests", [Key("toto", "tata")]),
         ]
     )
 
