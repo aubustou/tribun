@@ -88,11 +88,11 @@ def sort_revisions(revisions: List[Revision]) -> List[Revision]:
     return tree
 
 
-def put(keys: List[Key]) -> List[Key]:
+def put(keys: List[Key], exist_ok: bool = False) -> List[Key]:
     full_keys = get_full_keys(keys)
 
     unalterable_keys = [x for x in full_keys if not x.alterable]
-    if unalterable_keys:
+    if unalterable_keys and not exist_ok:
         found_keys = multi_get(consul, unalterable_keys)
         if found_keys:
             raise TribunError("Keys could not be modified")
